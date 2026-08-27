@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+<title>集训复习 · 刷题</title>
+<style>
+:root{
+  --bg:#f4f6f9; --card:#ffffff; --ink:#1f2937; --sub:#6b7280; --line:#e5e7eb;
+  --accent:#2563eb; --accent-soft:#eff6ff; --ok:#16a34a; --ok-soft:#f0fdf4;
+  --bad:#dc2626; --bad-soft:#fef2f2; --warn:#d97706;
+  --t-single:#2563eb; --t-multi:#7c3aed; --t-judge:#0d9488;
+  --shadow:0 1px 3px rgba(15,23,42,.06),0 4px 14px rgba(15,23,42,.05);
+}
+[data-theme="dark"]{
+  --bg:#0f151d; --card:#182130; --ink:#e7ecf4; --sub:#93a0b4; --line:#2a3648;
+  --accent:#5b95f7; --accent-soft:#1c2a40; --ok:#4ade80; --ok-soft:#14301f;
+  --bad:#f87171; --bad-soft:#3a1c20; --warn:#fbbf24;
+  --t-single:#6ea8ff; --t-multi:#c4a5ff; --t-judge:#45cdbd;
+  --shadow:none;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;
+  font-size:16px;line-height:1.55;}
+button{font-family:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
+#app{max-width:720px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+/* ---------- 顶栏 ---------- */
+.topbar{position:sticky;top:0;z-index:30;background:var(--card);border-bottom:1px solid var(--line)}
+.topbar-in{display:flex;align-items:center;gap:10px;padding:12px 16px}
+.topbar h1{font-size:17px;margin:0;font-weight:700;flex:1;letter-spacing:.5px}
+.iconbtn{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--bg)}
+.iconbtn:active{transform:scale(.94)}
+/* ---------- 主区域 ---------- */
+#main{flex:1;padding:14px 14px calc(78px + env(safe-area-inset-bottom));width:100%}
+.card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px;border:1px solid transparent}
+[data-theme="dark"] .card{border-color:var(--line)}
+h2.sec{font-size:15px;font-weight:700;margin:2px 0 12px}
+.muted{color:var(--sub)}
+.small{font-size:13px}
+/* 首页统计 */
+.statgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;text-align:center}
+@media (max-width:430px){.statgrid{grid-template-columns:repeat(3,1fr)}}
+.statgrid .num{font-size:22px;font-weight:700;line-height:1.25}
+.statgrid .lbl{font-size:12px;color:var(--sub)}
+.quickgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.quick{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:13px 12px;text-align:left;font-size:14px;font-weight:600;line-height:1.45}
+.quick .em{display:block;font-size:19px;margin-bottom:5px}
+.quick:active{opacity:.75}
+.bar-row{margin:11px 0}
+.bar-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;gap:8px}
+.bar-top b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{height:8px;background:var(--bg);border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+.bar-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .4s}
+/* ---------- 组卷 ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:99px;padding:7px 13px;font-size:14px;user-select:none}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+[data-theme="dark"] .chip.on{color:#0b1220}
+.seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:3px;gap:3px;margin-bottom:14px}
+.seg button{flex:1;padding:9px 6px;border-radius:8px;font-size:14px;font-weight:600;color:var(--sub)}
+.seg button.on{background:var(--card);color:var(--accent);box-shadow:var(--shadow)}
+.btn{display:block;width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;text-align:center;
+  background:var(--accent);color:#fff;transition:transform .05s}
+[data-theme="dark"] .btn{color:#0b1220}
+.btn:active{transform:scale(.985)}
+.btn:disabled{opacity:.45}
+.btn.plain{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.numinput{width:96px;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:15px}
+.rowline{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.danger-text{color:var(--bad)!important}
+/* ---------- 列表 ---------- */
+.search{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:11px;background:var(--bg);color:var(--ink);font-size:15px;margin:2px 0 10px}
+.list-item{display:flex;gap:10px;align-items:flex-start;padding:12px 2px;border-bottom:1px solid var(--line)}
+.list-item:last-child{border-bottom:none}
+.list-item .no{font-size:12px;color:var(--sub);min-width:36px;padding-top:3px;font-variant-numeric:tabular-nums}
+.list-item .stem{text-align:left;flex:1;font-size:14.5px}
+.list-meta{font-size:12px;color:var(--sub);margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dot-ok,.dot-bad,.dot-none{display:inline-block;width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.dot-ok{background:var(--ok)}.dot-bad{background:var(--bad)}.dot-none{background:var(--line)}
+.typechip{font-size:11px;padding:1.5px 8px;border-radius:6px;color:#fff;font-weight:700}
+.t1{background:var(--t-single)}.t2{background:var(--t-multi)}.t3{background:var(--t-judge)}
+.favstar{font-size:19px;color:var(--sub);padding:2px 4px;flex:0 0 auto}
+.favstar.on{color:#f59e0b}
+.emptyhint{text-align:center;color:var(--sub);padding:30px 10px;font-size:14px}
+/* ---------- 底栏 ---------- */
+.tabbar{position:fixed;bottom:0;left:0;right:0;z-index:30;background:var(--card);border-top:1px solid var(--line);
+  display:flex;max-width:720px;margin:0 auto;padding-bottom:env(safe-area-inset-bottom)}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0 8px;font-size:11.5px;color:var(--sub)}
+.tabbar button .ic{font-size:20px;line-height:1}
+.tabbar button.on{color:var(--accent);font-weight:700}
+/* ---------- 做题浮层 ---------- */
+#quizLayer{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column}
+#quizLayer[hidden]{display:none}
+.quiz-head{background:var(--card);border-bottom:1px solid var(--line);padding:10px 12px;display:flex;align-items:center;gap:8px}
+.quiz-head .ttl{font-weight:700;font-size:15px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.quiz-head .cnt{font-size:13px;color:var(--sub);white-space:nowrap;font-variant-numeric:tabular-nums}
+.quiz-body{flex:1;overflow-y:auto;padding:14px 14px 24px;-webkit-overflow-scrolling:touch}
+.badges{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.bdg{font-size:12px;padding:3px 10px;border-radius:7px;background:var(--card);border:1px solid var(--line);color:var(--sub)}
+.bdg.type{color:#fff;border:none;font-weight:700;padding:3.5px 11px}
+.bdg.wctag{color:var(--bad);border-color:var(--bad)}
+.stem{background:var(--card);border-radius:14px;padding:16px;font-size:16.5px;box-shadow:var(--shadow);font-weight:500;border:1px solid transparent}
+[data-theme="dark"] .stem{border-color:var(--line)}
+.optlist{margin-top:12px;display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:var(--card);
+  border:1.5px solid var(--line);border-radius:12px;padding:12px 13px;font-size:15px;transition:border-color .12s,color:inherit}
+.opt .letter{flex:0 0 26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--bg);font-weight:700;font-size:13.5px;color:var(--sub)}
+.opt.sel{border-color:var(--accent);background:var(--accent-soft)}
+.opt.sel .letter{background:var(--accent);color:#fff}
+.opt.right{border-color:var(--ok);background:var(--ok-soft)}
+.opt.right .letter{background:var(--ok);color:#fff}
+.opt.wrongpick{border-color:var(--bad);background:var(--bad-soft)}
+.opt.wrongpick .letter{background:var(--bad);color:#fff}
+.opt.dim{opacity:.55}
+.judge{display:flex;gap:12px;margin-top:12px}
+.judge .opt{flex:1;justify-content:center;align-items:center;font-size:27px;font-weight:800;padding:17px 12px}
+.quiz-foot{background:var(--card);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+.verdict{border-radius:13px;padding:13px 15px;margin-top:12px;font-size:14.5px}
+.verdict.ok{background:var(--ok-soft);border:1px solid var(--ok)}
+.verdict.bad{background:var(--bad-soft);border:1px solid var(--bad)}
+.verdict .vt{font-weight:800;font-size:16px;margin-bottom:2px}
+.verdict.ok .vt{color:var(--ok)}.verdict.bad .vt{color:var(--bad)}
+.expbox{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 15px;margin-top:12px;font-size:14.5px}
+.expbox .et{font-weight:700;font-size:13.5px;color:var(--accent);margin-bottom:5px}
+.notebox{margin-top:9px;font-size:13px;color:var(--warn)}
+.navrow{display:flex;gap:10px;margin-top:6px}
+.navrow .btn{flex:1;padding:13px}
+.done-panel{text-align:center;padding:26px 8px}
+.done-panel .big{font-size:46px}
+.done-panel h3{margin:10px 0 4px;font-size:19px}
+.done-stats{display:flex;justify-content:center;gap:22px;margin:16px 0 22px}
+.done-stats .num{font-size:24px;font-weight:800}
+.done-stats .lbl{font-size:12px;color:var(--sub)}
+/* ---------- 其他 ---------- */
+#toast{position:fixed;left:50%;bottom:98px;transform:translateX(-50%);z-index:80;background:rgba(15,23,42,.92);
+  color:#fff;font-size:14px;padding:10px 18px;border-radius:99px;opacity:0;pointer-events:none;transition:opacity .25s;max-width:82vw;text-align:center}
+[data-theme="dark"] #toast{background:rgba(229,234,244,.95);color:#101828}
+#toast.show{opacity:1}
+.setitem{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 2px;border-bottom:1px solid var(--line)}
+.setitem:last-child{border-bottom:none}
+.switch{position:relative;width:50px;height:28px;border-radius:99px;background:var(--line);transition:background .2s;flex:0 0 auto}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.switch.on{background:var(--accent)}
+.switch.on::after{left:25px}
+/* 题型徽章配色（需覆盖 .bdg 的卡片底色） */
+.bdg.type.t1{background:var(--t-single)}
+.bdg.type.t2{background:var(--t-multi)}
+.bdg.type.t3{background:var(--t-judge)}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar"><div class="topbar-in">
+    <h1 id="appTitle">📚 集训复习 · 刷题</h1>
+    <button class="iconbtn" id="themeBtn" title="深色模式">🌙</button>
+  </div></header>
+
+  <main id="main"></main>
+
+  <nav class="tabbar" id="tabbar"></nav>
+
+  <!-- 做题浮层 -->
+  <div id="quizLayer" hidden>
+    <div class="quiz-head">
+      <button class="iconbtn" id="qClose">←</button>
+      <span class="ttl" id="qTitle"></span>
+      <span class="cnt" id="qCnt"></span>
+      <button class="iconbtn" id="qFav" style="font-size:20px">☆</button>
+    </div>
+    <div class="quiz-body" id="qBody"></div>
+    <div class="quiz-foot" id="qFoot"></div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script src="data/data.js"></script>
+<script>
+"use strict";
+/* ================= 数据 ================= */
+const QZB = window.QBANK;
+const QUESTIONS = QZB.q.map(r => ({id:r.i, ci:r.c, t:r.t, stem:r.s, opts:r.o||null, ans:r.a, exp:r.e, note:r.n||""}));
+const COURSES   = QZB.courses;
+const TYPE_NAME = {1:"单选",2:"多选",3:"判断"};
+const LETTERS   = ["A","B","C","D","E"];
+const TOTAL     = QUESTIONS.length;
+const QBYID     = {};
+QUESTIONS.forEach(q => { QBYID[q.id] = q; });
+const Q         = id => QBYID[id];
+
+/* ================= 本地存储 ================= */
+const KEY = "trainQuiz.v1";
+const DEFSTATE = () => ({dark:false, q:{}, wrong:{}, fav:[], seqPos:0, ver:2});
+let S;
+try { S = Object.assign(DEFSTATE(), JSON.parse(localStorage.getItem(KEY)||"{}")); }
+catch(e){ S = DEFSTATE(); }
+/* 题库扩充后题目排序变化：旧版本进度位置重新对齐 */
+if(S.ver !== 2){ S.ver = 2; S.seqPos = 0; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast("保存失败："+e.message); } }
+
+/* ================= 工具 ================= */
+const $ = s => document.querySelector(s);
+const esc = x => String(x).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let toastTimer;
+function toast(m){
+  const t=$("#toast"); t.textContent=m; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2200);
+}
+function accStats(){
+  let att=0,rights=0;
+  for(const k in S.q){ if(S.q[k] && S.q[k].a){ att++; if(S.q[k].ok) rights++; } }
+  return {att,rights};
+}
+const triedCount = () => Object.keys(S.q).length;
+const favSet = () => new Set(S.fav);
+function trunc(s,n){ s=s.trim(); return s.length>n? s.slice(0,n)+"…":s; }
+function shuffle(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function scopeIds(f){
+  return QUESTIONS.filter(q =>
+    (!f.courses || f.courses.includes(q.ci)) &&
+    (!f.types  || f.types.includes(q.t))
+  ).map(q=>q.id);
+}
+
+/* ================= 界面状态 ================= */
+let TAB = "home";               // home | build | notes | settings
+let buildTab = "config";        // config 组卷 | browse 题库列表
+let notesTab = "wrong";
+// 组卷筛选
+const F = {mode:"seq", courses:new Set(), types:new Set(), count:20};
+function bfActive(){ return F.courses.size || F.types.size; }
+function currentFilter(){ return {courses:F.courses.size?[...F.courses]:null, types:F.types.size?[...F.types]:null}; }
+
+const TABCFG = [["home","🏠","首页"],["build","📝","组卷"],["notes","📕","错题"],["settings","⚙️","设置"]];
+function go(tab){ TAB=tab; render({top:true}); }
+function render(opts){
+  const top = !!(opts && opts.top);
+  const sx = window.scrollX, sy = window.scrollY;
+  $("#appTitle").textContent = {home:"📚 集训复习 · 刷题",build:"📝 组卷中心",notes:"📕 错题与收藏",settings:"⚙️ 设置"}[TAB];
+  $("#tabbar").innerHTML = TABCFG.map(([k,ic,nm]) =>
+    `<button data-action="go" data-tab="${k}" class="${TAB===k?"on":""}"><span class="ic">${ic}</span>${nm}</button>`).join("");
+  document.documentElement.dataset.theme = S.dark?"dark":"light";
+  $("#themeBtn").textContent = S.dark?"☀️":"🌙";
+  const m=$("#main");
+  m.innerHTML = TAB==="home"? vHome() : TAB==="build"? vBuild() : TAB==="notes"? vNotes() : vSettings();
+  if(top) window.scrollTo(0,0); else window.scrollTo(sx,sy);
+}
+
+/* ================= 首页 ================= */
+function vHome(){
+  const acc=accStats(), done=triedCount();
+  const nw=Object.keys(S.wrong).length, nf=S.fav.length;
+  let bars="";
+  COURSES.forEach((cn,ci)=>{
+    const total=QUESTIONS.filter(q=>q.ci===ci).length;
+    const dn=QUESTIONS.filter(q=>q.ci===ci && S.q[q.id]).length;
+    bars+=`<div class="bar-row">
+      <div class="bar-top"><b>${esc(cn)}</b><span class="muted small" style="white-space:nowrap">${dn}/${total}</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(dn/total*100)}%"></div></div></div>`;
+  });
+  const canResume = S.seqPos>0 && done>0 && S.seqPos<ALL_IDS.length;
+  return `
+  <div class="card">
+    <div class="statgrid">
+      <div><div class="num">${TOTAL}</div><div class="lbl">总题量</div></div>
+      <div><div class="num" style="color:var(--accent)">${done}</div><div class="lbl">已做题数</div></div>
+      <div><div class="num">${acc.att?Math.round(acc.rights/acc.att*100)+"%":"--"}</div><div class="lbl">正确率</div></div>
+      <div><div class="num" style="color:var(--bad)">${nw}</div><div class="lbl">错题数</div></div>
+      <div><div class="num" style="color:#f59e0b">${nf}</div><div class="lbl">收藏数</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2 class="sec">快速开始</h2>
+    <div class="quickgrid">
+      ${canResume?`<button class="quick" data-action="resume-seq"><span class="em">⏩</span>继续上次进度<span class="small muted">（第 ${Math.min(S.seqPos+1,TOTAL)} 题）</span></button>`:""}
+      <button class="quick" data-action="start-seq-all"><span class="em">📖</span>全部题库顺序练习<span class="small muted">（${TOTAL} 题）</span></button>
+      <button class="quick" data-action="drill-home"><span class="em">🔁</span>错题专练<span class="small muted">（${nw} 题）</span></button>
+      <button class="quick" data-action="go-build-scope"><span class="em">🎯</span>按课程/题型练习或随机组卷</button>
+      <button class="quick" data-action="go-list"><span class="em">🗂️</span>查看全部题库列表</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2 class="sec">分课程进度（${COURSES.length} 门课）</h2>
+    ${bars}
+  </div>`;
+}
+
+/* ================= 组卷中心 ================= */
+function vBuild(){
+  const head = `<div class="seg">
+    <button class="${buildTab==="config"?"on":""}" data-action="btab" data-v="config">组卷练习</button>
+    <button class="${buildTab==="browse"?"on":""}" data-action="btab" data-v="browse">题库列表</button>
+  </div>`;
+  return head + (buildTab==="config"? vConfig() : vBrowse());
+}
+function vConfig(){
+  const flt=currentFilter();
+  const n=scopeIds(flt).length;
+  const courseChips=COURSES.map((cn,ci)=>
+    `<button class="chip ${F.courses.has(ci)?"on":""}" data-action="f-course" data-ci="${ci}">${esc(cn)}</button>`).join("");
+  const typeChips=[1,2,3].map(t=>
+    `<button class="chip ${F.types.has(t)?"on":""}" data-action="f-type" data-t="${t}">${TYPE_NAME[t]}</button>`).join("");
+  return `
+  <div class="card">
+    <h2 class="sec">① 选择范围</h2>
+    <div class="small muted" style="margin-bottom:8px">课程筛选（不选＝全部课程）</div>
+    <div class="chips">${courseChips}</div>
+    <div class="small muted" style="margin:12px 0 8px">题型筛选（不选＝不限题型）</div>
+    <div class="chips">${typeChips}</div>
+    <div class="small muted" style="margin-top:10px">当前范围内共 <b style="color:var(--accent)">${n}</b> 题</div>
+  </div>
+  <div class="card">
+    <h2 class="sec">② 选择模式</h2>
+    <div class="seg" style="margin-bottom:10px">
+      <button class="${F.mode==="seq"?"on":""}" data-action="f-mode" data-m="seq">顺序做题</button>
+      <button class="${F.mode==="random"?"on":""}" data-action="f-mode" data-m="random">随机抽题</button>
+    </div>
+    ${F.mode==="random"?`
+    <div class="small muted" style="margin-bottom:8px">抽题数量</div>
+    <div class="chips rowline">
+      ${[10,20,30,50].map(c=>`<button class="chip ${F.count===c?"on":""}" data-action="f-count" data-c="${c}">${c} 题</button>`).join("")}
+      <input id="customCnt" class="numinput" type="number" min="1" max="${Math.max(n,1)}" placeholder="自定义">
+      <button class="chip" data-action="f-count-custom">确定</button>
+    </div>`:""}
+  </div>
+  <button class="btn" data-action="launch">${
+    F.mode==="seq"? `▶ 开始顺序练习（${n} 题）`
+                  : `🎲 随机抽取 ${Math.min(F.count,n)} 题练习`
+  }</button>`;
+}
+/* —— 题库列表 —— */
+function vBrowse(){
+  const flt=currentFilter();
+  const all=scopeIds(flt);
+  const kw=(window.__kw||"").trim().toLowerCase();
+  const shown=kw? all.filter(id=>Q(id).stem.toLowerCase().includes(kw)) : all;
+  return `
+  <div class="card">
+    <div class="chips" style="margin-bottom:2px">
+      <button class="chip ${bfActive()?"":"on"}" data-action="f-clearall">全部课程 / 题型</button>
+      ${[1,2,3].map(t=>`<button class="chip ${F.types.has(t)?"on":""}" data-action="f-type" data-t="${t}">${TYPE_NAME[t]}</button>`).join("")}
+    </div>
+    <div class="chips" style="margin-top:8px">
+      ${COURSES.map((cn,ci)=>`<button class="chip ${F.courses.has(ci)?"on":""}" data-action="f-course" data-ci="${ci}">${esc(cn)}</button>`).join("")}
+    </div>
+    <div class="small muted" style="margin-top:10px">共 ${all.length} 题${kw?`，匹配「${esc(window.__kw.trim())}」 ${shown.length} 题`:""}。点击题目即可答题。</div>
+  </div>
+  <div class="card">
+    <input class="search" id="kwInput" placeholder="🔍 搜索题干关键词…" value="${esc(window.__kw||"")}">
+    <div id="listBody">${shown.map(id=>listItem(id,Q(id),"","","")).join("")||`<div class="emptyhint">没有符合条件的题目</div>`}</div>
+  </div>`;
+}
+
+/* ================= 错题 / 收藏 ================= */
+function vNotes(){
+  const segs=`<div class="seg">
+    <button class="${notesTab==="wrong"?"on":""}" data-action="ntab" data-v="wrong">错题本（${Object.keys(S.wrong).length}）</button>
+    <button class="${notesTab==="fav"?"on":""}" data-action="ntab" data-v="fav">收藏夹（${S.fav.length}）</button>
+  </div>`;
+  let body="";
+  if(notesTab==="wrong"){
+    const ids=Object.keys(S.wrong).map(Number).sort((a,b)=>a-b);
+    if(!ids.length)
+      body=`<div class="emptyhint">🎉 太棒了，目前没有错题！<br><span class="small">做错的题会自动收录到这里。</span></div>`;
+    else{
+      body=`<div id="listBody">${ids.map((id,i)=>listItem(id,Q(id),`已错 ${S.wrong[id]} 次`,i,"wrong")).join("")}</div>
+      <div style="height:12px"></div>
+      <button class="btn" data-action="drill-home">▶ 开始错题专练（${ids.length} 题）</button>
+      <div style="height:10px"></div>
+      <button class="btn plain danger-text" data-action="clear-wrong">🧹 清空错题本</button>`;
+    }
+  }else{
+    const ids=S.fav.slice().sort((a,b)=>a-b);
+    body=!ids.length?`<div class="emptyhint">还没有收藏的题目。<br><span class="small">做题时点右上角 ☆ 或“标记疑难”按钮可标记。</span></div>`
+        :`<div id="listBody">${ids.map((id,i)=>listItem(id,Q(id),"",i,"fav")).join("")}</div>`;
+  }
+  return `<div class="card">${segs}${body}</div>`;
+}
+function listItem(id,q,meta,pos,ctx){
+  const fav=favSet().has(id), rec=S.q[id];
+  const dot=!rec?"dot-none":rec.ok?"dot-ok":"dot-bad";
+  return `<div class="list-item">
+    <span class="no">#${id}</span>
+    <div class="stem" data-action="ctx-open" data-id="${id}" data-pos="${pos===""?-1:pos}" data-ctx="${ctx}">
+      ${esc(trunc(q.stem,70))}
+      <div class="list-meta">
+        <span class="typechip t${q.t}">${TYPE_NAME[q.t]}</span>
+        <span>${esc(COURSES[q.ci])}</span>
+        ${meta?`<span>· ${esc(meta)}</span>`:""}
+        <span class="${dot}"></span>
+      </div>
+    </div>
+    <button class="favstar ${fav?"on":""}" data-action="toggle-fav" data-id="${id}">${fav?"★":"☆"}</button>
+  </div>`;
+}
+
+/* ================= 设置 ================= */
+function vSettings(){
+  return `
+  <div class="card">
+    <h2 class="sec">外观</h2>
+    <div class="setitem"><span>深色模式</span><button class="switch ${S.dark?"on":""}" data-action="toggle-dark" role="switch" aria-checked="${!!S.dark}"></button></div>
+  </div>
+  <div class="card">
+    <h2 class="sec">学习记录备份</h2>
+    <div class="small muted" style="margin-bottom:12px">做题记录保存在<b>当前设备的浏览器</b>中；换设备、换浏览器或清除缓存不会互通。建议定期导出备份文件保存。</div>
+    <button class="btn" data-action="export">📤 导出进度（下载备份文件）</button>
+    <div style="height:10px"></div>
+    <button class="btn plain" data-action="import">📥 导入进度（选择备份文件）</button>
+    <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+  </div>
+  <div class="card">
+    <h2 class="sec">危险操作</h2>
+    <button class="btn plain danger-text" data-action="reset">🗑️ 清空全部学习记录</button>
+  </div>
+  <div class="card small muted">
+    题库共 <b>${TOTAL}</b> 题，覆盖 ${COURSES.length} 门课程：单选 ${QUESTIONS.filter(q=>q.t===1).length}、多选 ${QUESTIONS.filter(q=>q.t===2).length}、判断 ${QUESTIONS.filter(q=>q.t===3).length}。
+    应用完全离线运行，学习记录不上传任何服务器。
+  </div>`;
+}
+
+/* ================= 做题会话 ================= */
+let session=null;   // {ids,pos,title,isWrongDrill,params,responded:Set}
+let sel={pick:null,set:null}; // 当前题作答前选择
+
+const ALL_IDS = QUESTIONS.map(q=>q.id);
+
+function startSession(opt){
+  session={ ids:opt.ids, pos:opt.pos||0, title:opt.title,
+            isWrongDrill:!!opt.isWrongDrill, params:opt.params||null,
+            mode_seqAll:!!opt.mode_seqAll,
+            responded:new Set() };
+  sel={pick:null,set:null};
+  $("#quizLayer").hidden=false;
+  document.body.style.overflow="hidden";
+  renderQuiz();
+}
+function closeSession(){
+  session=null;
+  $("#quizLayer").hidden=true;
+  document.body.style.overflow="";
+  render();
+}
+const curQ = () => Q(session.ids[session.pos]);
+function renderQuiz(){
+  const q=curQ();
+  // 错题专练中，错题本内的题目允许重做（答对移出 / 答错累计）
+  const redone = session.responded.has(q.id);
+  const canResubmit = session.isWrongDrill && S.wrong[q.id]!=null && !redone;
+  const interactive = !S.q[q.id] || canResubmit;
+  const submitted = !interactive;
+  const rec = S.q[q.id];
+  $("#qTitle").textContent=session.title;
+  $("#qCnt").textContent=`${session.pos+1}/${session.ids.length}`;
+  const fav=favSet().has(q.id);
+  $("#qFav").textContent=fav?"★":"☆";
+  $("#qFav").style.color=fav?"#f59e0b":"";
+
+  const wc=S.wrong[q.id];
+  const badges=`<span class="bdg type t${q.t}">${TYPE_NAME[q.t]}</span>
+    <span class="bdg">${esc(COURSES[q.ci])}</span>
+    ${wc?`<span class="bdg wctag">曾错 ${wc} 次</span>`:""}
+    ${fav?'<span class="bdg">⭐ 已收藏</span>':""}`;
+
+  /* 选项区域 */
+  let optHtml="";
+  const pickCls=(isAns,isPick)=>{
+    return submitted ? (isAns?"right":isPick?"wrongpick":"dim")
+                     : (isPick?"sel":"");
+  };
+  if(q.t===3){
+    optHtml=`<div class="judge">`+["对","错"].map(v=>{
+      const c=pickCls(submitted&&v===q.ans, submitted?rec.a===v:(sel.pick===v));
+      return `<button class="opt ${c}" data-action="pick" data-v="${v}" ${interactive?"":"disabled"}>${v}</button>`;
+    }).join("")+`</div>`;
+  }else{
+    optHtml=`<div class="optlist">`+q.opts.map((o,i)=>{
+      const L=LETTERS[i];
+      const isAns=submitted&&q.ans.includes(L);
+      const isPick=submitted? rec.a.includes(L) : (q.t===2? (sel.set?sel.set.has(L):false) : sel.pick===L);
+      return `<button class="opt ${pickCls(isAns,isPick)}" data-action="pick" data-v="${L}" ${interactive?"":"disabled"}>
+        <span class="letter">${L}</span><span>${esc(o)}</span></button>`;
+    }).join("")+`</div>`;
+  }
+
+  /* 提交后反馈区 */
+  let resultHtml="";
+  if(submitted){
+    const right=rec.ok;
+    const mine=q.t===2? rec.a.split("").join(" ") : rec.a;
+    resultHtml=`<div class="verdict ${right?"ok":"bad"}">
+      <div class="vt">${right?"✅ 回答正确":"❌ 回答错误"}</div>
+      <div>正确答案：<b>${fmtAns(q)}</b>${right?"":`　·　你的答案：<b>${mine}</b>`}</div>
+    </div>
+    <div class="expbox"><div class="et">💡 解析</div>${esc(q.exp)}
+      ${q.note?`<div class="notebox">⚠ ${esc(q.note)}</div>`:""}
+    </div>`;
+  }else if(session.isWrongDrill){
+    resultHtml=`<div class="expbox small" style="border-style:dashed">错题专练：提交后<b>答对本题即自动移出错题本</b>；答错则保留并累计错误次数。</div>`;
+  }
+
+  $("#qBody").innerHTML=`
+    <div class="badges">${badges}</div>
+    <div class="stem">${esc(q.stem)}${q.t===2?'<div class="small muted" style="margin-top:8px">※ 多选题：与正确答案完全一致才判对，漏选／错选均不得分</div>':""}</div>
+    ${optHtml}
+    ${resultHtml}`;
+
+  const hasNext = session.pos<session.ids.length-1;
+  $("#qFoot").innerHTML=`
+    <div class="navrow">
+      <button class="btn plain" data-action="prev" ${session.pos===0?"disabled":""}>← 上一题</button>
+      <button class="btn plain" data-action="mark">${favSet().has(q.id)?"★ 取消标记":"☆ 标记疑难"}</button>
+      ${hasNext
+        ? `<button class="btn" data-action="next">下一题 →</button>`
+        : `<button class="btn" data-action="finish">交卷统计 📊</button>`}
+    </div>
+    ${submitted?"":`<div style="height:10px"></div>
+      <button class="btn" data-action="submit" ${canSubmit()?"":"disabled"}>✔ 提交本题</button>`}`;
+  /* 翻到新的一题时回到题目顶部，避免停留在上一题的滚动位置 */
+  const posKey = session.title+"@"+session.pos;
+  if(renderQuiz.lastKey !== posKey){
+    renderQuiz.lastKey = posKey;
+    const b = $("#qBody"); if(b) b.scrollTop = 0;
+  }
+}
+function fmtAns(q){
+  return q.t===3? q.ans : (q.t===2? q.ans.split("").join(" ") : q.ans);
+}
+function canSubmit(){
+  const q=curQ();
+  const redone=session.responded.has(q.id);
+  const canResubmit=session.isWrongDrill && S.wrong[q.id]!=null && !redone;
+  if(S.q[q.id] && !canResubmit) return true;
+  return q.t===2 ? (sel.set && sel.set.size>=1) : !!sel.pick;
+}
+function toggleFav(id){
+  const i=S.fav.indexOf(id);
+  if(i>=0){ S.fav.splice(i,1); toast("已取消收藏"); }
+  else { S.fav.push(id); toast("已收藏 ⭐"); }
+  save();
+  /* render() 默认保持滚动位置，刷新列表不会跳顶 */
+  if(session && !$("#quizLayer").hidden) renderQuiz(); else render();
+}
+function pick(v){
+  const q=curQ();
+  const redone=session.responded.has(q.id);
+  const canResubmit=session.isWrongDrill && S.wrong[q.id]!=null && !redone;
+  if(S.q[q.id] && !canResubmit) return;   // 已提交过且不可重做则锁定
+  if(q.t===2){
+    if(!(sel.set instanceof Set)) sel.set=new Set();
+    sel.set.has(v)? sel.set.delete(v) : sel.set.add(v);
+  }else{
+    sel.pick=v;
+  }
+  renderQuiz();
+}
+function submitCur(){
+  const q=curQ();
+  const redone=session.responded.has(q.id);
+  const canResubmit=session.isWrongDrill && S.wrong[q.id]!=null && !redone;
+  if(S.q[q.id] && !canResubmit){ toast("本题已提交"); return; }
+  let choice;
+  if(q.t===2) choice=[...(sel.set||[])].sort().join("");
+  else choice=sel.pick||"";
+  if(!choice){ toast(q.t===2?"请先选择至少一个选项":"请先选择答案"); return; }
+  const ok = choice===q.ans;
+  S.q[q.id]={a:choice, ok, ts:Date.now()};
+  if(ok){
+    if(S.wrong[q.id]!=null){
+      delete S.wrong[q.id];
+      toast("回答正确，已自动移出错题本 ✅");
+    }
+  }else{
+    S.wrong[q.id]=(S.wrong[q.id]||0)+1;
+    toast(S.wrong[q.id]>1?`仍在错题本，已累计答错 ${S.wrong[q.id]} 次 ❌`:"已加入错题本 ❌");
+  }
+  session.responded.add(q.id);
+  save();
+  renderQuiz();
+  requestAnimationFrame(()=>{
+    const v = document.querySelector("#qBody .verdict");
+    if(v) v.scrollIntoView({behavior:"smooth", block:"nearest"});
+  });
+}
+function navPrev(){
+  if(session.mode_seqAll){
+    S.seqPos=Math.max(0,session.pos-1); save();
+  }
+  if(session.pos>0){ session.pos--; sel={pick:null,set:null}; renderQuiz(); }
+}
+function navNext(){
+  if(session.mode_seqAll){
+    S.seqPos=Math.min(TOTAL-1,session.pos+1); save();
+  }
+  if(session.pos<session.ids.length-1){ session.pos++; sel={pick:null,set:null}; renderQuiz(); }
+  else finishRound();
+}
+function finishRound(){
+  if(session.mode_seqAll){
+    S.seqPos = session.pos<TOTAL-1? session.pos : 0; save();
+  }
+  let answered=0,right=0,wrongN=0,fresh=0;
+  session.ids.forEach(id=>{
+    const rec=S.q[id];
+    if(rec){ answered++; rec.ok?right++:wrongN++; } else fresh++;
+  });
+  $("#qBody").innerHTML=`<div class="done-panel">
+    <div class="big">${answered>0&&right===answered?"🏆":"📋"}</div>
+    <h3>${esc(session.title)} · 完成</h3>
+    ${session.mode_seqAll&&fresh===0?`<div class="muted small">恭喜你完成了全部 ${TOTAL} 题！🎉</div>`:""}
+    <div class="done-stats">
+      <div><div class="num">${answered}</div><div class="lbl">已作答</div></div>
+      <div><div class="num" style="color:var(--ok)">${right}</div><div class="lbl">正确</div></div>
+      <div><div class="num" style="color:var(--bad)">${wrongN}</div><div class="lbl">错误</div></div>
+      ${fresh?`<div><div class="num" style="color:var(--sub)">${fresh}</div><div class="lbl">未作答</div></div>`:""}
+    </div>
+    <div class="navrow">
+      <button class="btn plain" data-action="close-finish">返回首页</button>
+      <button class="btn" data-action="restart">再来一轮</button>
+    </div>
+  </div>`;
+  $("#qFoot").innerHTML="";
+}
+function restartRound(){
+  const p=session&&session.params;
+  if(p&&p.kind==="scope"){
+    if(p.drill && Object.keys(S.wrong).length===0){ toast("太棒了！错题本已经清空 🎉"); closeSession(); return; }
+    const base=scopeIds(p.f||{});
+    if(!base.length){ toast("范围内没有题目了"); closeSession(); return; }
+    let ids=base;
+    if(p.order==="random"){
+      ids=shuffle(base).slice(0,Math.min(p.count||base.length,base.length)).sort((a,b)=>a-b);
+    }
+    const ttl = p.drill? `错题专练 · ${ids.length} 题` : (p.title||session.title);
+    startSession({ids, title:ttl, isWrongDrill:!!p.drill, pos:0, params:p});
+    return;
+  }
+  // 全部顺序练习重来
+  S.seqPos=0; save();
+  startSession({ids:ALL_IDS.slice(), title:"全部题库 · 顺序练习", pos:0, params:{kind:"all"}, mode_seqAll:true});
+}
+
+/* ================= 启动入口 ================= */
+function launchSeqAll(resume){
+  startSession({ids:ALL_IDS.slice(), title:"全部题库 · 顺序练习",
+    pos: resume? Math.min(Math.max(S.seqPos,0), TOTAL-1) : 0,
+    params:{kind:"all"}, mode_seqAll:true});
+}
+function launchDrill(){
+  const ids=Object.keys(S.wrong).map(Number).sort((a,b)=>a-b);
+  if(!ids.length){ toast("错题本是空的，先去练习吧～"); return; }
+  startSession({ids, title:`错题专练 · ${ids.length} 题`, isWrongDrill:true, pos:0,
+    params:{kind:"scope", order:"random", count:ids.length, drill:true}});
+}
+function launchFromBuilder(){
+  const flt=currentFilter();
+  const base=scopeIds(flt);
+  if(!base.length){ toast("所选范围内没有题目"); return; }
+  if(F.mode==="seq"){
+    startSession({ids:base, title:`顺序练习 · ${base.length} 题`,
+      params:{kind:"scope", f:flt, order:"seq", title:`顺序练习 · ${base.length} 题`}});
+  }else{
+    const n=Math.min(F.count, base.length);
+    const ids=shuffle(base).slice(0,n).sort((a,b)=>a-b);
+    startSession({ids, title:`随机组卷 · ${ids.length} 题`,
+      params:{kind:"scope", f:flt, order:"random", count:n, title:`随机组卷 · ${n} 题`}});
+  }
+}
+
+/* ================= 全局事件 ================= */
+document.addEventListener("click", ev=>{
+  const el=ev.target.closest("[data-action]");
+  if(!el||el.disabled) return;
+  const act=el.dataset.action;
+  switch(act){
+    case "go": go(el.dataset.tab); break;
+    case "go-build-scope": TAB="build"; buildTab="config"; render(); break;
+    case "go-list": TAB="build"; buildTab="browse"; render(); break;
+
+    case "toggle-dark": S.dark=!S.dark; save(); render(); break;
+
+    case "start-seq-all": launchSeqAll(false); break;
+    case "resume-seq": launchSeqAll(true); break;
+    case "drill-home": launchDrill(); break;
+
+    case "btab": buildTab=el.dataset.v; render(); break;
+    case "ntab": notesTab=el.dataset.v; render(); break;
+
+    case "f-course":{
+      const ci=+el.dataset.ci;
+      F.courses.has(ci)?F.courses.delete(ci):F.courses.add(ci);
+      render(); break;}
+    case "f-type":{
+      const t=+el.dataset.t;
+      F.types.has(t)?F.types.delete(t):F.types.add(t);
+      render(); break;}
+    case "f-clearall": F.courses.clear(); F.types.clear(); render(); break;
+    case "f-mode": F.mode=el.dataset.m; render(); break;
+    case "f-count": F.count=+el.dataset.c; render(); break;
+    case "f-count-custom":{
+      const inp=$("#customCnt"); const v=parseInt(inp&&inp.value,10);
+      if(!v||v<1){ toast("请输入有效数量"); return; }
+      F.count=v; render(); break;}
+
+    case "launch": launchFromBuilder(); break;
+
+    case "clear-wrong":
+      if(Object.keys(S.wrong).length && confirm("确认清空整个错题本吗？此操作不可恢复。")){
+        S.wrong={}; save(); render(); toast("错题本已清空");
+      }
+      break;
+    case "ctx-open":{
+      const ctxMap={
+        "": ()=>ALL_IDS.slice(),
+        "wrong": ()=>Object.keys(S.wrong).map(Number).sort((a,b)=>a-b),
+        "fav": ()=>S.fav.slice().sort((a,b)=>a-b),
+      };
+      let ids=[];
+      const pos=parseInt(el.dataset.pos,10);
+      if(el.dataset.ctx==="scope"){ window.__lastScope=window.__lastScope||[]; ids=window.__lastScope; }
+      else ids=(ctxMap[el.dataset.ctx]||ctxMap[""])();
+      if(!ids.includes(+el.dataset.id)) ids=[+el.dataset.id];
+      startSession({ids, title: el.dataset.ctx==="wrong"?"错题本浏览": el.dataset.ctx==="fav"?"收藏夹浏览":"浏览题库",
+        pos: pos>=0&&ids[pos]===+el.dataset.id? pos : Math.max(ids.indexOf(+el.dataset.id),0)});
+      break;}
+
+    case "toggle-fav": toggleFav(+el.dataset.id); break;
+    case "export": doExport(); break;
+    case "import": $("#importFile").click(); break;
+    case "reset":
+      if(confirm("确定清空全部学习记录吗？（做题记录、错题本、收藏夹都会删除）"))
+        if(confirm("再次确认：真的要清空吗？建议先导出备份。")){ S=DEFSTATE(); save(); render(); toast("已清空"); }
+      break;
+
+    /* —— 做题 —— */
+    case "pick": pick(el.dataset.v); break;
+    case "submit": submitCur(); break;
+    case "prev": navPrev(); break;
+    case "next": navNext(); break;
+    case "finish": finishRound(); break;
+    case "close-finish": closeSession(); break;
+    case "restart": restartRound(); break;
+    case "mark": toggleFav(curQ().id); break;
+  }
+});
+document.addEventListener("change", ev=>{
+  if(ev.target.id==="importFile"){
+    const f=ev.target.files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      try{
+        const d=JSON.parse(rd.result);
+        if(typeof d!=="object"||d===null||!("q" in d)) throw new Error("不是有效的进度备份文件");
+        if(!confirm("导入将覆盖当前设备上的学习记录，继续吗？")) return;
+        S=Object.assign(DEFSTATE(), d);
+        save(); render(); toast("导入成功 ✅");
+      }catch(e){ alert("导入失败："+e.message+"\n请选择由本应用导出的 JSON 备份文件。"); }
+    };
+    rd.readAsText(f,"utf-8");
+    ev.target.value="";
+  }
+});
+document.addEventListener("input", ev=>{
+  if(ev.target.id==="kwInput"){
+    window.__kw=ev.target.value;
+    clearTimeout(window.__kwT);
+    window.__kwT=setTimeout(()=>{
+      const body=$("#listBody");
+      const kw=(window.__kw||"").trim().toLowerCase();
+      const all=scopeIds(currentFilter());
+      const shown=kw? all.filter(id=>Q(id).stem.toLowerCase().includes(kw)):all;
+      body.innerHTML=shown.map(id=>listItem(id,Q(id),"","","")).join("")||`<div class="emptyhint">没有符合条件的题目</div>`;
+    },160);
+  }
+});
+$("#themeBtn").addEventListener("click", ()=>{ S.dark=!S.dark; save(); render(); });
+$("#qClose").addEventListener("click", ()=>closeSession());
+$("#qFav").addEventListener("click", ()=>{ if(session) toggleFav(curQ().id); });
+window.addEventListener("keydown", ev=>{
+  if($("#quizLayer").hidden||!session) return;
+  if(ev.key==="ArrowRight") navNext();
+  else if(ev.key==="ArrowLeft") navPrev();
+});
+
+/* ================= 导出 ================= */
+function doExport(){
+  try{
+    const blob=new Blob([JSON.stringify(Object.assign({_app:"trainQuiz",_time:new Date().toISOString()},S),null,1)],
+                        {type:"application/json"});
+    const d=new Date();
+    const pad=x=>String(x).padStart(2,"0");
+    const name=`刷题进度_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob); a.download=name;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },800);
+    toast("已导出备份文件 ✅");
+  }catch(e){ alert("导出失败："+e.message); }
+}
+
+render();
+</script>
+</body>
+</html>
