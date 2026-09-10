@@ -220,6 +220,7 @@ function setBank(id){
 function applyBank(){
   const meta = BANKS.find(b=>b.id===CUR);
   ROOT.cur = CUR; save();
+  S = ROOT.banks[CUR] || (ROOT.banks[CUR] = DEFBANK());
   COURSES = meta.raw.courses.slice();
   QUESTIONS = meta.raw.q.map(r => ({id:r.i, ci:r.c, t:r.t, stem:r.s, opts:r.o||null, ans:r.a, exp:r.e, note:r.n||"", real:r.r||0}));
   PAPERS = (meta.raw.papers || []).slice();
