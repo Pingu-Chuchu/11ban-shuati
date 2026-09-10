@@ -180,28 +180,58 @@ h2.sec{font-size:15px;font-weight:700;margin:2px 0 12px}
 </div>
 
 <script src="data/data.js"></script>
+<script src="data/data-gt.js"></script>
 <script>
 "use strict";
-/* ================= 数据 ================= */
-const QZB = window.QBANK;
-const QUESTIONS = QZB.q.map(r => ({id:r.i, ci:r.c, t:r.t, stem:r.s, opts:r.o||null, ans:r.a, exp:r.e, note:r.n||""}));
-const COURSES   = QZB.courses;
+/* ================= 数据（多题库） ================= */
 const TYPE_NAME = {1:"单选",2:"多选",3:"判断"};
-const LETTERS   = ["A","B","C","D","E"];
-const TOTAL     = QUESTIONS.length;
-const QBYID     = {};
-QUESTIONS.forEach(q => { QBYID[q.id] = q; });
-const Q         = id => QBYID[id];
+const LETTERS   = ["A","B","C","D","E","F","G"];
+const BANKS = [
+  {id:"11ban", label:"11班集训", title:"📚 集训复习 · 刷题", raw: window.QBANK},
+  {id:"gt",    label:"集团集训", title:"📚 集团集训 · 刷题", raw: window.QBANK_GT},
+].filter(b => b.raw);
+let QUESTIONS=[], COURSES=[], TOTAL=0, QBYID={}, PAPERS=[];
+const Q = id => QBYID[id];
 
-/* ================= 本地存储 ================= */
-const KEY = "trainQuiz.v1";
-const DEFSTATE = () => ({dark:false, q:{}, wrong:{}, fav:[], seqPos:0, ver:2});
-let S;
-try { S = Object.assign(DEFSTATE(), JSON.parse(localStorage.getItem(KEY)||"{}")); }
-catch(e){ S = DEFSTATE(); }
-/* 题库扩充后题目排序变化：旧版本进度位置重新对齐 */
-if(S.ver !== 2){ S.ver = 2; S.seqPos = 0; }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast("保存失败："+e.message); } }
+/* ================= 本地存储（按题库隔离） ================= */
+const KEY = "trainQuiz.multi.v1";
+const OLDKEY = "trainQuiz.v1";
+const DEFBANK = () => ({q:{}, wrong:{}, fav:[], seqPos:0});
+let ROOT;
+try { ROOT = Object.assign({dark:false, cur:null, banks:{}}, JSON.parse(localStorage.getItem(KEY)||"{}")); }
+catch(e){ ROOT = {dark:false, cur:null, banks:{}}; }
+if(!Object.keys(ROOT.banks).length){
+  try{
+    const old = JSON.parse(localStorage.getItem(OLDKEY)||"null");
+    if(old){ const b=DEFBANK(); b.q=old.q||{}; b.wrong=old.wrong||{}; b.fav=old.fav||[]; b.seqPos=old.seqPos||0; ROOT.banks["11ban"]=b; ROOT.dark=!!old.dark; }
+  }catch(e){}
+}
+let CUR = BANKS.some(b => b.id===ROOT.cur) ? ROOT.cur : BANKS[0].id;
+let S = ROOT.banks[CUR] || (ROOT.banks[CUR] = DEFBANK());
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(ROOT)); }catch(e){ toast("保存失败："+e.message); } }
+function setBank(id){
+  if(!BANKS.some(b=>b.id===id) || id===CUR) return;
+  CUR=id; ROOT.cur=id;
+  S = ROOT.banks[id] || (ROOT.banks[id] = DEFBANK());
+  save();
+  try{ history.replaceState(null,"","#"+CUR); }catch(e){}
+  applyBank();
+}
+function applyBank(){
+  const meta = BANKS.find(b=>b.id===CUR);
+  ROOT.cur = CUR; save();
+  COURSES = meta.raw.courses.slice();
+  QUESTIONS = meta.raw.q.map(r => ({id:r.i, ci:r.c, t:r.t, stem:r.s, opts:r.o||null, ans:r.a, exp:r.e, note:r.n||"", real:r.r||0}));
+  PAPERS = (meta.raw.papers || []).slice();
+  TOTAL = QUESTIONS.length;
+  QBYID = {}; QUESTIONS.forEach(q => { QBYID[q.id] = q; });
+  ALL_IDS = QUESTIONS.map(q=>q.id);
+  session = null; sel = {pick:null,set:null};
+  $("#quizLayer").hidden = true; document.body.style.overflow="";
+  notesTab = "wrong"; buildTab = "config"; window.__kw = "";
+  document.title = meta.title;
+  render({top:true});
+}
 
 /* ================= 工具 ================= */
 const $ = s => document.querySelector(s);
@@ -245,7 +275,8 @@ function go(tab){ TAB=tab; render({top:true}); }
 function render(opts){
   const top = !!(opts && opts.top);
   const sx = window.scrollX, sy = window.scrollY;
-  $("#appTitle").textContent = {home:"📚 集训复习 · 刷题",build:"📝 组卷中心",notes:"📕 错题与收藏",settings:"⚙️ 设置"}[TAB];
+  const meta = BANKS.find(b=>b.id===CUR);
+  $("#appTitle").textContent = {home:meta.title, build:"📝 "+meta.label+" · 组卷", notes:"📕 "+meta.label+" · 错题与收藏", settings:"⚙️ 设置"}[TAB];
   $("#tabbar").innerHTML = TABCFG.map(([k,ic,nm]) =>
     `<button data-action="go" data-tab="${k}" class="${TAB===k?"on":""}"><span class="ic">${ic}</span>${nm}</button>`).join("");
   document.documentElement.dataset.theme = S.dark?"dark":"light";
@@ -268,7 +299,19 @@ function vHome(){
       <div class="bar-track"><div class="bar-fill" style="width:${Math.round(dn/total*100)}%"></div></div></div>`;
   });
   const canResume = S.seqPos>0 && done>0 && S.seqPos<ALL_IDS.length;
+  const bankCards = BANKS.map(b=>{
+    const st = b.id===CUR ? S : (ROOT.banks[b.id] || DEFBANK());
+    const dn = Object.keys(st.q).length;
+    const cur = b.id===CUR;
+    return `<button class="quick" style="${cur?"border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;":""}" data-action="switch-bank" data-bank="${b.id}">
+      <span class="em">${cur?"✅":"📚"}</span>${esc(b.label)}<span class="small muted">（${b.raw.q.length} 题 · 已做 ${dn}）</span></button>`;
+  }).join("");
   return `
+  <div class="card">
+    <h2 class="sec">选择题库</h2>
+    <div class="quickgrid">${bankCards}</div>
+    <div class="small muted" style="margin-top:8px">两个题库的做题记录、错题本、收藏互相独立，切换不丢失。</div>
+  </div>
   <div class="card">
     <div class="statgrid">
       <div><div class="num">${TOTAL}</div><div class="lbl">总题量</div></div>
@@ -278,6 +321,14 @@ function vHome(){
       <div><div class="num" style="color:#f59e0b">${nf}</div><div class="lbl">收藏数</div></div>
     </div>
   </div>
+  ${PAPERS.length?`<div class="card">
+    <h2 class="sec">📄 考前真题卷</h2>
+    ${PAPERS.map(p=>{
+      const dn=p.ids.filter(id=>S.q[id]).length;
+      return `<button class="btn plain" style="margin-bottom:8px;font-weight:600" data-action="open-paper" data-paper="${p.id}">📄 ${esc(p.label)} · 已做 ${dn}/${p.ids.length}</button>`;
+    }).join("")}
+    <div class="small muted">按原卷顺序逐题练习；真题与日常练习共用做题记录（题目旁会标「真题」）。</div>
+  </div>`:""}
   <div class="card">
     <h2 class="sec">快速开始</h2>
     <div class="quickgrid">
@@ -394,6 +445,7 @@ function listItem(id,q,meta,pos,ctx){
       ${esc(trunc(q.stem,70))}
       <div class="list-meta">
         <span class="typechip t${q.t}">${TYPE_NAME[q.t]}</span>
+        ${q.real?'<span class="typechip" style="background:var(--accent)">真题</span>':""}
         <span>${esc(COURSES[q.ci])}</span>
         ${meta?`<span>· ${esc(meta)}</span>`:""}
         <span class="${dot}"></span>
@@ -423,7 +475,7 @@ function vSettings(){
     <button class="btn plain danger-text" data-action="reset">🗑️ 清空全部学习记录</button>
   </div>
   <div class="card small muted">
-    题库共 <b>${TOTAL}</b> 题，覆盖 ${COURSES.length} 门课程：单选 ${QUESTIONS.filter(q=>q.t===1).length}、多选 ${QUESTIONS.filter(q=>q.t===2).length}、判断 ${QUESTIONS.filter(q=>q.t===3).length}。
+    当前题库：<b>${esc(BANKS.find(b=>b.id===CUR).label)}</b> · 共 <b>${TOTAL}</b> 题，覆盖 ${COURSES.length} 门课程：单选 ${QUESTIONS.filter(q=>q.t===1).length}、多选 ${QUESTIONS.filter(q=>q.t===2).length}、判断 ${QUESTIONS.filter(q=>q.t===3).length}。首页可切换题库，两库记录互不影响。
     应用完全离线运行，学习记录不上传任何服务器。
   </div>`;
 }
@@ -432,7 +484,7 @@ function vSettings(){
 let session=null;   // {ids,pos,title,isWrongDrill,params,responded:Set}
 let sel={pick:null,set:null}; // 当前题作答前选择
 
-const ALL_IDS = QUESTIONS.map(q=>q.id);
+let ALL_IDS = [];   /* 随当前题库在 applyBank() 中重建 */
 
 function startSession(opt){
   session={ ids:opt.ids, pos:opt.pos||0, title:opt.title,
@@ -468,6 +520,7 @@ function renderQuiz(){
   const wc=S.wrong[q.id];
   const badges=`<span class="bdg type t${q.t}">${TYPE_NAME[q.t]}</span>
     <span class="bdg">${esc(COURSES[q.ci])}</span>
+    ${q.real?'<span class="bdg" style="color:var(--accent);border-color:var(--accent);font-weight:700">★ 真题</span>':""}
     ${wc?`<span class="bdg wctag">曾错 ${wc} 次</span>`:""}
     ${fav?'<span class="bdg">⭐ 已收藏</span>':""}`;
 
@@ -632,6 +685,11 @@ function finishRound(){
 }
 function restartRound(){
   const p=session&&session.params;
+  if(p&&p.kind==="paper"){
+    const pp=PAPERS.find(x=>x.id===p.paperId);
+    if(pp) startSession({ids:pp.ids.slice(), title:"📄 "+pp.label, params:{kind:"paper", paperId:pp.id, label:pp.label}});
+    return;
+  }
   if(p&&p.kind==="scope"){
     if(p.drill && Object.keys(S.wrong).length===0){ toast("太棒了！错题本已经清空 🎉"); closeSession(); return; }
     const base=scopeIds(p.f||{});
@@ -691,6 +749,12 @@ document.addEventListener("click", ev=>{
     case "start-seq-all": launchSeqAll(false); break;
     case "resume-seq": launchSeqAll(true); break;
     case "drill-home": launchDrill(); break;
+    case "open-paper":{
+      const pp=PAPERS.find(x=>x.id===el.dataset.paper);
+      if(!pp){ toast("试卷不存在"); break; }
+      startSession({ids:pp.ids.slice(), title:"📄 "+pp.label,
+        params:{kind:"paper", paperId:pp.id, label:pp.label}});
+      break;}
 
     case "btab": buildTab=el.dataset.v; render(); break;
     case "ntab": notesTab=el.dataset.v; render(); break;
@@ -734,11 +798,12 @@ document.addEventListener("click", ev=>{
       break;}
 
     case "toggle-fav": toggleFav(+el.dataset.id); break;
+    case "switch-bank": setBank(el.dataset.bank); break;
     case "export": doExport(); break;
     case "import": $("#importFile").click(); break;
     case "reset":
-      if(confirm("确定清空全部学习记录吗？（做题记录、错题本、收藏夹都会删除）"))
-        if(confirm("再次确认：真的要清空吗？建议先导出备份。")){ S=DEFSTATE(); save(); render(); toast("已清空"); }
+      if(confirm(`确定清空「${BANKS.find(b=>b.id===CUR).label}」题库的学习记录吗？（只清当前题库：做题记录、错题本、收藏夹；另一题库不受影响）`))
+        if(confirm("再次确认：真的要清空吗？建议先导出备份。")){ S.q={}; S.wrong={}; S.fav=[]; S.seqPos=0; save(); render(); toast("已清空"); }
       break;
 
     /* —— 做题 —— */
@@ -760,9 +825,12 @@ document.addEventListener("change", ev=>{
       try{
         const d=JSON.parse(rd.result);
         if(typeof d!=="object"||d===null||!("q" in d)) throw new Error("不是有效的进度备份文件");
-        if(!confirm("导入将覆盖当前设备上的学习记录，继续吗？")) return;
-        S=Object.assign(DEFSTATE(), d);
-        save(); render(); toast("导入成功 ✅");
+        const target = BANKS.some(b=>b.id===d._bank) ? d._bank : CUR;
+        if(!confirm(`导入将覆盖「${BANKS.find(b=>b.id===target).label}」题库在本设备的学习记录，继续吗？`)) return;
+        const b=ROOT.banks[target] || (ROOT.banks[target]=DEFBANK());
+        b.q=d.q||{}; b.wrong=d.wrong||{}; b.fav=Array.isArray(d.fav)?d.fav:[]; b.seqPos=d.seqPos||0;
+        if(target!==CUR) setBank(target); else { save(); render(); }
+        toast("导入成功 ✅");
       }catch(e){ alert("导入失败："+e.message+"\n请选择由本应用导出的 JSON 备份文件。"); }
     };
     rd.readAsText(f,"utf-8");
@@ -794,11 +862,12 @@ window.addEventListener("keydown", ev=>{
 /* ================= 导出 ================= */
 function doExport(){
   try{
-    const blob=new Blob([JSON.stringify(Object.assign({_app:"trainQuiz",_time:new Date().toISOString()},S),null,1)],
+    const meta=BANKS.find(b=>b.id===CUR);
+    const blob=new Blob([JSON.stringify(Object.assign({_app:"trainQuiz",_bank:CUR,_time:new Date().toISOString()},S),null,1)],
                         {type:"application/json"});
     const d=new Date();
     const pad=x=>String(x).padStart(2,"0");
-    const name=`刷题进度_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+    const name=`刷题进度_${meta.label}_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.json`;
     const a=document.createElement("a");
     a.href=URL.createObjectURL(blob); a.download=name;
     document.body.appendChild(a); a.click();
@@ -807,7 +876,19 @@ function doExport(){
   }catch(e){ alert("导出失败："+e.message); }
 }
 
-render();
+/* 启动：支持 #11ban / #gt 直达指定题库 */
+(function(){
+  const hb=(location.hash||"").replace("#","").trim();
+  if(BANKS.some(b=>b.id===hb)) CUR=hb;
+  else if(!BANKS.some(b=>b.id===ROOT.cur)) ROOT.cur=BANKS[0].id, CUR=ROOT.cur;
+  else CUR=ROOT.cur;
+  applyBank();
+})();
+/* 页面已打开时，地址栏 hash 变化也能切换题库（如从聊天里点开带 #gt 的链接） */
+window.addEventListener("hashchange", ()=>{
+  const hb=(location.hash||"").replace("#","").trim();
+  if(BANKS.some(b=>b.id===hb) && hb!==CUR) setBank(hb);
+});
 </script>
 </body>
 </html>
