@@ -11,14 +11,14 @@
   --bg:#f4f6f9; --card:#ffffff; --ink:#1f2937; --sub:#6b7280; --line:#e5e7eb;
   --accent:#2563eb; --accent-soft:#eff6ff; --ok:#16a34a; --ok-soft:#f0fdf4;
   --bad:#dc2626; --bad-soft:#fef2f2; --warn:#d97706;
-  --t-single:#2563eb; --t-multi:#7c3aed; --t-judge:#0d9488;
+  --t-single:#2563eb; --t-multi:#7c3aed; --t-judge:#0d9488; --t-short:#ea580c;
   --shadow:0 1px 3px rgba(15,23,42,.06),0 4px 14px rgba(15,23,42,.05);
 }
 [data-theme="dark"]{
   --bg:#0f151d; --card:#182130; --ink:#e7ecf4; --sub:#93a0b4; --line:#2a3648;
   --accent:#5b95f7; --accent-soft:#1c2a40; --ok:#4ade80; --ok-soft:#14301f;
   --bad:#f87171; --bad-soft:#3a1c20; --warn:#fbbf24;
-  --t-single:#6ea8ff; --t-multi:#c4a5ff; --t-judge:#45cdbd;
+  --t-single:#6ea8ff; --t-multi:#c4a5ff; --t-judge:#45cdbd; --t-short:#ffa94d;
   --shadow:none;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -82,7 +82,7 @@ h2.sec{font-size:15px;font-weight:700;margin:2px 0 12px}
 .dot-ok,.dot-bad,.dot-none{display:inline-block;width:8px;height:8px;border-radius:50%;flex:0 0 auto}
 .dot-ok{background:var(--ok)}.dot-bad{background:var(--bad)}.dot-none{background:var(--line)}
 .typechip{font-size:11px;padding:1.5px 8px;border-radius:6px;color:#fff;font-weight:700}
-.t1{background:var(--t-single)}.t2{background:var(--t-multi)}.t3{background:var(--t-judge)}
+.t1{background:var(--t-single)}.t2{background:var(--t-multi)}.t3{background:var(--t-judge)}.t4{background:var(--t-short)}
 .favstar{font-size:19px;color:var(--sub);padding:2px 4px;flex:0 0 auto}
 .favstar.on{color:#f59e0b}
 .emptyhint{text-align:center;color:var(--sub);padding:30px 10px;font-size:14px}
@@ -103,6 +103,7 @@ h2.sec{font-size:15px;font-weight:700;margin:2px 0 12px}
 .bdg{font-size:12px;padding:3px 10px;border-radius:7px;background:var(--card);border:1px solid var(--line);color:var(--sub)}
 .bdg.type{color:#fff;border:none;font-weight:700;padding:3.5px 11px}
 .bdg.wctag{color:var(--bad);border-color:var(--bad)}
+.bdg.prot{color:var(--warn);border-color:var(--warn);font-weight:700}
 .stem{background:var(--card);border-radius:14px;padding:16px;font-size:16.5px;box-shadow:var(--shadow);font-weight:500;border:1px solid transparent}
 [data-theme="dark"] .stem{border-color:var(--line)}
 .optlist{margin-top:12px;display:flex;flex-direction:column;gap:9px}
@@ -151,6 +152,11 @@ h2.sec{font-size:15px;font-weight:700;margin:2px 0 12px}
 .bdg.type.t1{background:var(--t-single)}
 .bdg.type.t2{background:var(--t-multi)}
 .bdg.type.t3{background:var(--t-judge)}
+.bdg.type.t4{background:var(--t-short)}
+.typechip.protchip{background:var(--warn)}
+.prewrap{white-space:pre-wrap;word-break:break-word}
+.selfrow{display:flex;gap:10px;margin-top:12px}
+.selfrow .btn{flex:1;padding:13px}
 </style>
 </head>
 <body>
@@ -181,15 +187,31 @@ h2.sec{font-size:15px;font-weight:700;margin:2px 0 12px}
 
 <script src="data/data.js"></script>
 <script src="data/data-gt.js"></script>
+<script src="data/data-ag.js"></script>
 <script>
 "use strict";
 /* ================= 数据（多题库） ================= */
-const TYPE_NAME = {1:"单选",2:"多选",3:"判断"};
-const LETTERS   = ["A","B","C","D","E","F","G"];
-const BANKS = [
-  {id:"11ban", label:"11班集训", title:"📚 集训复习 · 刷题", raw: window.QBANK},
-  {id:"gt",    label:"集团集训", title:"📚 集团集训 · 刷题", raw: window.QBANK_GT},
-].filter(b => b.raw);
+const TYPE_NAME = {1:"单选",2:"多选",3:"判断",4:"简答"};
+const LETTERS   = ["A","B","C","D","E","F","G","H","I"];
+/* 本地自定义题库（网页内导入 Excel 生成，仅存本设备） */
+const CBKEY = "trainQuiz.customBanks.v1";
+let CUSTOM_DEFS = [];
+try{ const _cd=JSON.parse(localStorage.getItem(CBKEY)||"[]"); if(Array.isArray(_cd)) CUSTOM_DEFS=_cd; }catch(e){}
+function saveCustomDefs(){ try{ localStorage.setItem(CBKEY, JSON.stringify(CUSTOM_DEFS)); }catch(e){ toast("本地题库保存失败："+e.message); } }
+let BANKS = [];
+function buildBanks(){
+  let arr = [
+    {id:"11ban", label:"11班集训", title:"📚 集训复习 · 刷题", raw: window.QBANK},
+    {id:"gt",    label:"集团集训", title:"📚 集团集训 · 刷题", raw: window.QBANK_GT},
+    {id:"ag",    label:"安规",     title:"📚 安规 · 刷题",     raw: window.QBANK_AG},
+  ];
+  /* data-xxx.js 生成文件自带注册（window.QBANK_EXTRA.push({id,label,raw})），放入 data/ 并加 script 标签即可收录 */
+  (window.QBANK_EXTRA||[]).forEach(e => arr.push({id:e.id, label:e.label, title:"📚 "+e.label+" · 刷题", raw:e.raw}));
+  CUSTOM_DEFS.forEach(d => arr.push({id:d.id, label:d.label, title:"📚 "+d.label+" · 刷题", raw:d.raw, custom:true}));
+  const seen=new Set();
+  BANKS = arr.filter(b => b.raw && !seen.has(b.id) && seen.add(b.id));
+}
+buildBanks();
 let QUESTIONS=[], COURSES=[], TOTAL=0, QBYID={}, PAPERS=[];
 const Q = id => QBYID[id];
 
@@ -222,12 +244,12 @@ function applyBank(){
   ROOT.cur = CUR; save();
   S = ROOT.banks[CUR] || (ROOT.banks[CUR] = DEFBANK());
   COURSES = meta.raw.courses.slice();
-  QUESTIONS = meta.raw.q.map(r => ({id:r.i, ci:r.c, t:r.t, stem:r.s, opts:r.o||null, ans:r.a, exp:r.e, note:r.n||"", real:r.r||0}));
+  QUESTIONS = meta.raw.q.map(r => ({id:r.i, ci:r.c, t:r.t, stem:r.s, opts:r.o||null, ans:r.a, exp:r.e, note:r.n||"", real:r.r||0, prot:r.p||0}));
   PAPERS = (meta.raw.papers || []).slice();
   TOTAL = QUESTIONS.length;
   QBYID = {}; QUESTIONS.forEach(q => { QBYID[q.id] = q; });
   ALL_IDS = QUESTIONS.map(q=>q.id);
-  session = null; sel = {pick:null,set:null};
+  session = null; sel = SEL0();
   $("#quizLayer").hidden = true; document.body.style.overflow="";
   notesTab = "wrong"; buildTab = "config"; window.__kw = "";
   document.title = meta.title;
@@ -258,7 +280,8 @@ function shuffle(arr){
 function scopeIds(f){
   return QUESTIONS.filter(q =>
     (!f.courses || f.courses.includes(q.ci)) &&
-    (!f.types  || f.types.includes(q.t))
+    (!f.types  || f.types.includes(q.t)) &&
+    (!f.onlyProt || q.prot)
   ).map(q=>q.id);
 }
 
@@ -267,9 +290,9 @@ let TAB = "home";               // home | build | notes | settings
 let buildTab = "config";        // config 组卷 | browse 题库列表
 let notesTab = "wrong";
 // 组卷筛选
-const F = {mode:"seq", courses:new Set(), types:new Set(), count:20};
-function bfActive(){ return F.courses.size || F.types.size; }
-function currentFilter(){ return {courses:F.courses.size?[...F.courses]:null, types:F.types.size?[...F.types]:null}; }
+const F = {mode:"seq", courses:new Set(), types:new Set(), count:20, onlyProt:false};
+function bfActive(){ return F.courses.size || F.types.size || F.onlyProt; }
+function currentFilter(){ return {courses:F.courses.size?[...F.courses]:null, types:F.types.size?[...F.types]:null, onlyProt:F.onlyProt||undefined}; }
 
 const TABCFG = [["home","🏠","首页"],["build","📝","组卷"],["notes","📕","错题"],["settings","⚙️","设置"]];
 function go(tab){ TAB=tab; render({top:true}); }
@@ -311,7 +334,7 @@ function vHome(){
   <div class="card">
     <h2 class="sec">选择题库</h2>
     <div class="quickgrid">${bankCards}</div>
-    <div class="small muted" style="margin-top:8px">两个题库的做题记录、错题本、收藏互相独立，切换不丢失。</div>
+    <div class="small muted" style="margin-top:8px">${BANKS.length} 个题库的做题记录、错题本、收藏互相独立，切换不丢失。</div>
   </div>
   <div class="card">
     <div class="statgrid">
@@ -359,8 +382,9 @@ function vConfig(){
   const n=scopeIds(flt).length;
   const courseChips=COURSES.map((cn,ci)=>
     `<button class="chip ${F.courses.has(ci)?"on":""}" data-action="f-course" data-ci="${ci}">${esc(cn)}</button>`).join("");
-  const typeChips=[1,2,3].map(t=>
-    `<button class="chip ${F.types.has(t)?"on":""}" data-action="f-type" data-t="${t}">${TYPE_NAME[t]}</button>`).join("");
+  const typeChips=[1,2,3,4].map(t=>
+    `<button class="chip ${F.types.has(t)?"on":""}" data-action="f-type" data-t="${t}">${TYPE_NAME[t]}</button>`).join("")+
+    `<button class="chip ${F.onlyProt?"on":""}" data-action="f-prot">🛡 仅保命题</button>`;
   return `
   <div class="card">
     <h2 class="sec">① 选择范围</h2>
@@ -399,7 +423,8 @@ function vBrowse(){
   <div class="card">
     <div class="chips" style="margin-bottom:2px">
       <button class="chip ${bfActive()?"":"on"}" data-action="f-clearall">全部课程 / 题型</button>
-      ${[1,2,3].map(t=>`<button class="chip ${F.types.has(t)?"on":""}" data-action="f-type" data-t="${t}">${TYPE_NAME[t]}</button>`).join("")}
+      ${[1,2,3,4].map(t=>`<button class="chip ${F.types.has(t)?"on":""}" data-action="f-type" data-t="${t}">${TYPE_NAME[t]}</button>`).join("")}
+      <button class="chip ${F.onlyProt?"on":""}" data-action="f-prot">🛡 保命题</button>
     </div>
     <div class="chips" style="margin-top:8px">
       ${COURSES.map((cn,ci)=>`<button class="chip ${F.courses.has(ci)?"on":""}" data-action="f-course" data-ci="${ci}">${esc(cn)}</button>`).join("")}
@@ -447,6 +472,7 @@ function listItem(id,q,meta,pos,ctx){
       <div class="list-meta">
         <span class="typechip t${q.t}">${TYPE_NAME[q.t]}</span>
         ${q.real?'<span class="typechip" style="background:var(--accent)">真题</span>':""}
+        ${q.prot?'<span class="typechip protchip">🛡 保命</span>':""}
         <span>${esc(COURSES[q.ci])}</span>
         ${meta?`<span>· ${esc(meta)}</span>`:""}
         <span class="${dot}"></span>
@@ -458,6 +484,8 @@ function listItem(id,q,meta,pos,ctx){
 
 /* ================= 设置 ================= */
 function vSettings(){
+  const typeLine=[1,2,3,4].filter(t=>QUESTIONS.some(q=>q.t===t))
+    .map(t=>`${TYPE_NAME[t]} ${QUESTIONS.filter(q=>q.t===t).length}`).join("、");
   return `
   <div class="card">
     <h2 class="sec">外观</h2>
@@ -472,18 +500,35 @@ function vSettings(){
     <input type="file" id="importFile" accept=".json,application/json" style="display:none">
   </div>
   <div class="card">
+    <h2 class="sec">📥 导入 Excel 题库</h2>
+    <div class="small muted" style="margin-bottom:10px">支持按题型分 Sheet 的 Excel（单选 / 多选 / 判断 / 简答），自动完成列识别、答案归一化与校验。解析后可生成题库文件放进仓库供所有人使用，或仅存为本设备的本地题库。</div>
+    <div class="rowline" style="margin-bottom:10px">
+      <span class="small muted">题库名称</span><input id="impLabel" class="numinput" style="width:150px" value="${esc(IMP?IMP.defLabel:"")}" placeholder="如：安规">
+      <span class="small muted">短id</span><input id="impId" class="numinput" style="width:96px" value="${esc(IMP?IMP.defId:"")}" placeholder="如：ag">
+    </div>
+    <button class="btn plain" data-action="imp-pick">📁 选择 Excel 文件并解析</button>
+    <input type="file" id="xlFile" accept=".xlsx,.xls" style="display:none">
+    <div id="impReport">${impReportHtml()}</div>
+  </div>
+  ${CUSTOM_DEFS.length?`<div class="card">
+    <h2 class="sec">🗂 本地题库管理</h2>
+    ${CUSTOM_DEFS.map(d=>`<div class="setitem"><span>${esc(d.label)}<span class="small muted">　${(d.raw&&d.raw.q||[]).length} 题</span></span><button class="btn plain danger-text" style="width:auto;padding:7px 14px;font-size:13px;font-weight:600" data-action="del-bank" data-bank="${esc(d.id)}">删除</button></div>`).join("")}
+    <div class="small muted" style="margin-top:8px">本地题库仅存在当前设备，删除后其做题记录一并清除。</div>
+  </div>`:""}
+  <div class="card">
     <h2 class="sec">危险操作</h2>
-    <button class="btn plain danger-text" data-action="reset">🗑️ 清空全部学习记录</button>
+    <button class="btn plain danger-text" data-action="reset">🗑️ 清空当前题库学习记录</button>
   </div>
   <div class="card small muted">
-    当前题库：<b>${esc(BANKS.find(b=>b.id===CUR).label)}</b> · 共 <b>${TOTAL}</b> 题，覆盖 ${COURSES.length} 门课程：单选 ${QUESTIONS.filter(q=>q.t===1).length}、多选 ${QUESTIONS.filter(q=>q.t===2).length}、判断 ${QUESTIONS.filter(q=>q.t===3).length}。首页可切换题库，两库记录互不影响。
+    当前题库：<b>${esc(BANKS.find(b=>b.id===CUR).label)}</b> · 共 <b>${TOTAL}</b> 题，覆盖 ${COURSES.length} 门课程：${typeLine}。首页可切换题库，各库记录互不影响。
     应用完全离线运行，学习记录不上传任何服务器。
   </div>`;
 }
 
 /* ================= 做题会话 ================= */
 let session=null;   // {ids,pos,title,isWrongDrill,params,responded:Set}
-let sel={pick:null,set:null}; // 当前题作答前选择
+const SEL0 = () => ({pick:null, set:null, revealed:false}); // revealed：简答题是否已展示参考答案
+let sel=SEL0();
 
 let ALL_IDS = [];   /* 随当前题库在 applyBank() 中重建 */
 
@@ -492,7 +537,7 @@ function startSession(opt){
             isWrongDrill:!!opt.isWrongDrill, params:opt.params||null,
             mode_seqAll:!!opt.mode_seqAll,
             responded:new Set() };
-  sel={pick:null,set:null};
+  sel=SEL0();
   $("#quizLayer").hidden=false;
   document.body.style.overflow="hidden";
   renderQuiz();
@@ -522,6 +567,7 @@ function renderQuiz(){
   const badges=`<span class="bdg type t${q.t}">${TYPE_NAME[q.t]}</span>
     <span class="bdg">${esc(COURSES[q.ci])}</span>
     ${q.real?'<span class="bdg" style="color:var(--accent);border-color:var(--accent);font-weight:700">★ 真题</span>':""}
+    ${q.prot?'<span class="bdg prot">🛡 保命题</span>':""}
     ${wc?`<span class="bdg wctag">曾错 ${wc} 次</span>`:""}
     ${fav?'<span class="bdg">⭐ 已收藏</span>':""}`;
 
@@ -531,7 +577,26 @@ function renderQuiz(){
     return submitted ? (isAns?"right":isPick?"wrongpick":"dim")
                      : (isPick?"sel":"");
   };
-  if(q.t===3){
+  if(q.t===4){
+    /* 简答题：查看参考答案 → 自评 */
+    const revealed = sel.revealed || submitted;
+    if(!revealed){
+      optHtml=`<div style="margin-top:14px">
+        <button class="btn plain" data-action="reveal">👀 查看参考答案</button>
+        <div class="small muted" style="margin-top:8px;text-align:center">先自行作答，再对照参考答案自评</div></div>`;
+    }else{
+      optHtml=`<div class="expbox" style="margin-top:12px">
+        <div class="et">📄 参考答案</div><div class="prewrap">${esc(q.ans)}</div>
+        ${q.exp?`<div class="et" style="margin-top:12px">💡 解析 · 出自规范</div><div class="prewrap">${esc(q.exp)}</div>`:""}
+        ${q.note?`<div class="notebox">⚠ ${esc(q.note)}</div>`:""}</div>`;
+      if(!submitted){
+        optHtml+=`<div class="selfrow">
+          <button class="btn" style="background:var(--ok)" data-action="self-grade" data-ok="1">✅ 我答对了</button>
+          <button class="btn" style="background:var(--bad)" data-action="self-grade" data-ok="0">❌ 我答错了</button>
+        </div>`;
+      }
+    }
+  }else if(q.t===3){
     optHtml=`<div class="judge">`+["对","错"].map(v=>{
       const c=pickCls(submitted&&v===q.ans, submitted?rec.a===v:(sel.pick===v));
       return `<button class="opt ${c}" data-action="pick" data-v="${v}" ${interactive?"":"disabled"}>${v}</button>`;
@@ -551,13 +616,16 @@ function renderQuiz(){
   if(submitted){
     const right=rec.ok;
     const mine=q.t===2? rec.a.split("").join(" ") : rec.a;
+    /* 简答题的参考答案/解析已在题目区域展示；选择题在这里显示解析 */
+    const expBox=q.t===4?"":(q.exp?`<div class="expbox"><div class="et">💡 解析</div>${esc(q.exp)}
+      ${q.note?`<div class="notebox">⚠ ${esc(q.note)}</div>`:""}
+    </div>`:"");
     resultHtml=`<div class="verdict ${right?"ok":"bad"}">
       <div class="vt">${right?"✅ 回答正确":"❌ 回答错误"}</div>
-      <div>正确答案：<b>${fmtAns(q)}</b>${right?"":`　·　你的答案：<b>${mine}</b>`}</div>
-    </div>
-    <div class="expbox"><div class="et">💡 解析</div>${esc(q.exp)}
-      ${q.note?`<div class="notebox">⚠ ${esc(q.note)}</div>`:""}
-    </div>`;
+      ${q.t===4
+        ? `<div class="small">${right?"已按自评结果计入统计":"已自动加入错题本，可在错题专练中重刷"}</div>`
+        : `<div>正确答案：<b>${fmtAns(q)}</b>${right?"":`　·　你的答案：<b>${mine}</b>`}</div>`}
+    </div>`+expBox;
   }else if(session.isWrongDrill){
     resultHtml=`<div class="expbox small" style="border-style:dashed">错题专练：提交后<b>答对本题即自动移出错题本</b>；答错则保留并累计错误次数。</div>`;
   }
@@ -577,7 +645,7 @@ function renderQuiz(){
         ? `<button class="btn" data-action="next">下一题 →</button>`
         : `<button class="btn" data-action="finish">交卷统计 📊</button>`}
     </div>
-    ${submitted?"":`<div style="height:10px"></div>
+    ${(submitted||q.t===4)?"":`<div style="height:10px"></div>
       <button class="btn" data-action="submit" ${canSubmit()?"":"disabled"}>✔ 提交本题</button>`}`;
   /* 翻到新的一题时回到题目顶部，避免停留在上一题的滚动位置 */
   const posKey = session.title+"@"+session.pos;
@@ -591,6 +659,7 @@ function fmtAns(q){
 }
 function canSubmit(){
   const q=curQ();
+  if(q.t===4) return false;   // 简答题由自评按钮直接提交
   const redone=session.responded.has(q.id);
   const canResubmit=session.isWrongDrill && S.wrong[q.id]!=null && !redone;
   if(S.q[q.id] && !canResubmit) return true;
@@ -645,17 +714,34 @@ function submitCur(){
     if(v) v.scrollIntoView({behavior:"smooth", block:"nearest"});
   });
 }
+/* 简答题自评：对照参考答案后由用户自判对错 */
+function selfGrade(ok){
+  const q=curQ();
+  const redone=session.responded.has(q.id);
+  const canResubmit=session.isWrongDrill && S.wrong[q.id]!=null && !redone;
+  if(S.q[q.id] && !canResubmit){ toast("本题已提交"); return; }
+  S.q[q.id]={a: ok?"对":"错", ok:!!ok, ts:Date.now()};
+  if(ok){
+    if(S.wrong[q.id]!=null){ delete S.wrong[q.id]; toast("自评正确，已自动移出错题本 ✅"); }
+  }else{
+    S.wrong[q.id]=(S.wrong[q.id]||0)+1;
+    toast("已加入错题本 ❌");
+  }
+  session.responded.add(q.id);
+  save();
+  renderQuiz();
+}
 function navPrev(){
   if(session.mode_seqAll){
     S.seqPos=Math.max(0,session.pos-1); save();
   }
-  if(session.pos>0){ session.pos--; sel={pick:null,set:null}; renderQuiz(); }
+  if(session.pos>0){ session.pos--; sel=SEL0(); renderQuiz(); }
 }
 function navNext(){
   if(session.mode_seqAll){
     S.seqPos=Math.min(TOTAL-1,session.pos+1); save();
   }
-  if(session.pos<session.ids.length-1){ session.pos++; sel={pick:null,set:null}; renderQuiz(); }
+  if(session.pos<session.ids.length-1){ session.pos++; sel=SEL0(); renderQuiz(); }
   else finishRound();
 }
 function finishRound(){
@@ -768,7 +854,8 @@ document.addEventListener("click", ev=>{
       const t=+el.dataset.t;
       F.types.has(t)?F.types.delete(t):F.types.add(t);
       render(); break;}
-    case "f-clearall": F.courses.clear(); F.types.clear(); render(); break;
+    case "f-clearall": F.courses.clear(); F.types.clear(); F.onlyProt=false; render(); break;
+    case "f-prot": F.onlyProt=!F.onlyProt; render(); break;
     case "f-mode": F.mode=el.dataset.m; render(); break;
     case "f-count": F.count=+el.dataset.c; render(); break;
     case "f-count-custom":{
@@ -816,6 +903,31 @@ document.addEventListener("click", ev=>{
     case "close-finish": closeSession(); break;
     case "restart": restartRound(); break;
     case "mark": toggleFav(curQ().id); break;
+
+    /* —— 简答题 —— */
+    case "reveal": sel.revealed=true; renderQuiz(); break;
+    case "self-grade": selfGrade(el.dataset.ok==="1"); break;
+
+    /* —— Excel 题库导入 —— */
+    case "imp-pick": $("#xlFile").click(); break;
+    case "imp-gen": impGenFile(); break;
+    case "imp-local": impSaveLocal(); break;
+    case "del-bank":{
+      const id=el.dataset.bank;
+      const d=CUSTOM_DEFS.find(x=>x.id===id);
+      if(!d) break;
+      if(!confirm(`删除本地题库「${d.label}」？它在本设备的做题记录也将一并删除。`)) break;
+      CUSTOM_DEFS=CUSTOM_DEFS.filter(x=>x.id!==id);
+      saveCustomDefs();
+      delete ROOT.banks[id];
+      buildBanks();
+      if(CUR===id){
+        CUR=BANKS[0].id; ROOT.cur=CUR;
+        S=ROOT.banks[CUR]||DEFBANK();
+        applyBank();
+      }else{ save(); render(); }
+      toast("已删除本地题库");
+      break;}
   }
 });
 document.addEventListener("change", ev=>{
@@ -836,6 +948,33 @@ document.addEventListener("change", ev=>{
     };
     rd.readAsText(f,"utf-8");
     ev.target.value="";
+  }
+  if(ev.target.id==="xlFile"){
+    const f=ev.target.files[0]; ev.target.value="";
+    if(!f) return;
+    toast("正在解析 "+f.name+" …");
+    impEnsureLibs(err=>{
+      if(err){ alert(err); return; }
+      const rd=new FileReader();
+      rd.onload=()=>{
+        try{
+          const wb=XLSX.read(rd.result,{type:"array"});
+          const res=QBCore.parse(wb, XLSX);
+          if(!res.report.total){
+            const first=res.report.errors.length?res.report.errors[0]:"未找到符合格式的题目";
+            throw new Error(first);
+          }
+          const stem=f.name.replace(/\.[^.]+$/,"");
+          IMP={fileName:f.name, defLabel:stem.slice(0,20), defId:"b"+Date.now().toString(36).slice(-5), bank:res.bank, report:res.report};
+          render();
+          toast("解析完成：共 "+res.report.total+" 题 ✅");
+        }catch(e){
+          IMP=null; render();
+          alert("解析失败："+e.message);
+        }
+      };
+      rd.readAsArrayBuffer(f);
+    });
   }
 });
 document.addEventListener("input", ev=>{
@@ -859,6 +998,65 @@ window.addEventListener("keydown", ev=>{
   if(ev.key==="ArrowRight") navNext();
   else if(ev.key==="ArrowLeft") navPrev();
 });
+
+/* ================= Excel 题库导入（转换逻辑见 lib/qbank-core.js，Node 批量转换见 tools/build-bank.js） ================= */
+let IMP = null;   // 最近一次解析结果 {fileName, defLabel, defId, bank, report}
+function impEnsureLibs(cb){
+  if(window.XLSX && window.QBCore) return cb(null);
+  const need=[];
+  if(!window.XLSX) need.push("lib/xlsx.full.min.js");
+  if(!window.QBCore) need.push("lib/qbank-core.js");
+  let left=need.length, failed=false;
+  need.forEach(src=>{
+    const s=document.createElement("script");
+    s.src=src;
+    s.onload=()=>{ if(--left===0 && !failed) cb(null); };
+    s.onerror=()=>{ if(!failed){ failed=true; cb("解析组件加载失败："+src+"（请确认文件已随应用部署）"); } };
+    document.head.appendChild(s);
+  });
+}
+function impReportHtml(){
+  if(!IMP) return `<div class="small muted" style="margin-top:10px">尚未解析文件。解析后此处会显示题量统计与校验结果。</div>`;
+  const r=IMP.report;
+  const types=[1,2,3,4].filter(t=>r.byType[t]).map(t=>`${TYPE_NAME[t]} ${r.byType[t]}`).join("、");
+  return `<div class="expbox" style="margin-top:12px">
+    <div class="et">✅ 解析成功：${esc(IMP.fileName)}</div>
+    <div class="small">共 <b>${r.total}</b> 题（${types||"无"}）· ${r.courses.length} 个知识类别：${esc(r.courses.slice(0,8).join("、"))}${r.courses.length>8?" 等":""}</div>
+    ${r.warnings.length?`<div class="small" style="color:var(--warn);margin-top:6px">⚠ ${r.warnings.length} 条警告：${esc(r.warnings[0])}${r.warnings.length>1?" 等":""}</div>`:""}
+    ${r.errors.length?`<div class="small" style="color:var(--bad);margin-top:6px">✗ ${r.errors.length} 条被跳过：${esc(r.errors[0])}${r.errors.length>1?" 等":""}</div>`:""}
+  </div>
+  <div class="navrow">
+    <button class="btn plain" data-action="imp-gen">💾 生成题库文件（放仓库共享）</button>
+    <button class="btn" data-action="imp-local">📲 存为本地题库（仅本设备）</button>
+  </div>`;
+}
+function impGenFile(){
+  if(!IMP){ toast("请先解析 Excel 文件"); return; }
+  const label=($("#impLabel")&&$("#impLabel").value||"").trim();
+  const id=($("#impId")&&$("#impId").value||"").trim().toLowerCase();
+  if(!label){ toast("请先填写题库名称"); return; }
+  if(!/^[a-z0-9_]{1,12}$/.test(id)){ toast("短id只能用小写字母/数字/下划线（≤12位）"); return; }
+  try{
+    const blob=new Blob([QBCore.toJsFile(IMP.bank, id, label)],{type:"text/javascript"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob); a.download="data-"+id+".js";
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },800);
+    toast("已生成 data-"+id+".js：放入 data/ 并在 index.html 加一行 script 即可共享");
+  }catch(e){ alert("生成失败："+e.message); }
+}
+function impSaveLocal(){
+  if(!IMP){ toast("请先解析 Excel 文件"); return; }
+  const label=($("#impLabel")&&$("#impLabel").value||"").trim()||IMP.defLabel;
+  const id="imp_"+Date.now().toString(36);
+  CUSTOM_DEFS.push({id, label, raw:IMP.bank});
+  saveCustomDefs();
+  buildBanks();
+  IMP=null;
+  TAB="home";
+  toast("已保存为本地题库，正在切换 ✅");
+  setBank(id);
+}
 
 /* ================= 导出 ================= */
 function doExport(){
